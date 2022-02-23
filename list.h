@@ -2,7 +2,11 @@
 #ifndef _LIST_H_
 #define _LIST_H_
 
-#include "macro.h"
+#include <stddef.h>
+#include <stdbool.h>
+
+#define likely(x)   __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
 
 typedef struct list_head {
     struct list_head *prev, *next;
@@ -11,8 +15,11 @@ typedef struct list_head {
 #define LIST_HEAD(name) \
     struct list_head name = { &(name), &(name) }
 
-#define list_entry(ptr, type, member) \
-    container_of(ptr, type, member)
+#define list_entry(ptr, type, member) ({                \
+    const typeof(((type *)0)->member) *__mptr = (ptr);  \
+    (type *)((char *)__mptr - offsetof(type,member));   \
+})
+
 
 typedef long (*list_cmp_t)(struct list_head *, struct list_head *, void *);
 extern void list_sort(struct list_head *head, list_cmp_t cmp, void *data);

@@ -1,9 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "list.h"
 
-static __always_inline struct list_head *
-list_merge(list_cmp_t cmp, void *data,
-           struct list_head *a, struct list_head *b)
+static inline struct list_head *
+list_merge(list_cmp_t cmp, void *data, struct list_head *a, struct list_head *b)
 {
     struct list_head *node, **tail = &node;
 
@@ -30,9 +29,8 @@ list_merge(list_cmp_t cmp, void *data,
     return node;
 }
 
-static __always_inline void
-list_finish(list_cmp_t cmp, void *data, struct list_head *head,
-            struct list_head *a, struct list_head *b)
+static inline void
+list_finish(list_cmp_t cmp, void *data, struct list_head *head, struct list_head *a, struct list_head *b)
 {
     struct list_head *tail = head;
     unsigned int count = 0;
