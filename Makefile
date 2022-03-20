@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-flags = -g -O2 -Wall -Werror -Wextra
+flags = -g -O2 -Wall -Werror
 head  = list.h
 demo  = benchmark
 obj   = sort.o

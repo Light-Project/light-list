@@ -38,7 +38,7 @@ static void time_dump(int ticks, clock_t start, clock_t stop, struct tms *start_
     printf("  kern time: %lf\n", (stop_tms->tms_stime - start_tms->tms_stime) / (double)ticks);
 }
 
-static long demo_cmp(struct list_head *a, struct list_head *b, void *)
+static long demo_cmp(struct list_head *a, struct list_head *b, void *pdata)
 {
     struct list_demo *demo_a = list_to_demo(a);
     struct list_demo *demo_b = list_to_demo(b);
