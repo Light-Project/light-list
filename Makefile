@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-flags = -g -O2 -Wall -Werror
-head  = list.h
-demo  = benchmark
-obj   = sort.o
+flags = -g -O2 -Wall -Werror -I src/
+head  = src/list.h
+obj   = src/sort.o
+demo  = examples/benchmark
 
 all: $(demo)
 
@@ -10,7 +10,7 @@ all: $(demo)
 	@ echo -e "  \e[32mCC\e[0m	" $@
 	@ gcc -o $@ -c $< $(flags)
 
-$(demo): $(obj)
+$(demo): $(obj) $(addsuffix .c,$(demo))
 	@ echo -e "  \e[34mMKELF\e[0m	" $@
 	@ gcc -o $@ $@.c $<  $(flags)
 

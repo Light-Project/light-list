@@ -73,11 +73,18 @@ int main(void)
     stop = times(&stop_tms);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
+    start = times(&start_tms);
+    printf("List sort:\n");
     list_sort(&demo_list, demo_cmp, NULL);
+    stop = times(&stop_tms);
+    time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
-    printf("Sort output:\n");
+    start = times(&start_tms);
+    printf("List for each:\n");
     list_for_each_entry(node, &demo_list, list)
         node_dump(node);
+    stop = times(&stop_tms);
+    time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
     printf("Deletion All Node...\n");
 error:
