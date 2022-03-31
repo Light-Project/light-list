@@ -16,6 +16,6 @@ jobs:
     - name: make
       run:  make
     - name: benchmark
-      run:  ./benchmark
+      run:  ./examples/benchmark
     - name: make clean
       run:  make clean
