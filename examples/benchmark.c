@@ -75,7 +75,7 @@ int main(void)
 
     start = times(&start_tms);
     printf("List sort:\n");
-    list_sort(&demo_list, demo_cmp, NULL);
+    list_qsort(&demo_list, demo_cmp, NULL);
     stop = times(&stop_tms);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 

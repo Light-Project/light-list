@@ -29,11 +29,29 @@ struct list_head {
     (type *)((char *)__mptr - offsetof(type,member));   \
 })
 
+#ifndef POISON_OFFSET
+# define POISON_OFFSET 0
+#endif
+
+#define POISON_LIST1 ((void *) POISON_OFFSET + 0x10)
+#define POISON_LIST2 ((void *) POISON_OFFSET + 0x20)
+
 typedef long (*list_cmp_t)(struct list_head *, struct list_head *, void *);
-extern void list_sort(struct list_head *head, list_cmp_t cmp, void *data);
+extern void list_qsort(struct list_head *head, list_cmp_t cmp, void *data);
+extern void list_bsort(struct list_head *head, list_cmp_t cmp, void *data);
+
+#ifdef DEBUG_LIST
+extern bool list_debug_add_check(struct list_head *prev, struct list_head *next, struct list_head *new);
+extern bool list_debug_del_check(struct list_head *node);
+#endif
 
 static inline void list_insert(struct list_head *prev, struct list_head *next, struct list_head *new)
 {
+#ifdef DEBUG_LIST
+    if (unlikely(!list_debug_add_check(prev, next, new)))
+        return;
+#endif
+
     prev->next = new;
     next->prev = new;
     new->prev = prev;
@@ -76,6 +94,11 @@ static inline void list_add_prev(struct list_head *node, struct list_head *new)
  */
 static inline void list_del(struct list_head *node)
 {
+#ifdef DEBUG_LIST
+    if (unlikely(!list_debug_del_check(node)))
+        return;
+#endif
+
     node->prev->next = node->next;
     node->next->prev = node->prev;
     node->next = NULL;

@@ -68,7 +68,7 @@ list_finish(list_cmp_t cmp, void *data, struct list_head *head, struct list_head
     head->prev = tail;
 }
 
-void list_sort(struct list_head *head, list_cmp_t cmp, void *data)
+void list_qsort(struct list_head *head, list_cmp_t cmp, void *data)
 {
     struct list_head *pending = NULL, *node = head->next;
     unsigned int count = 0;
@@ -112,4 +112,22 @@ void list_sort(struct list_head *head, list_cmp_t cmp, void *data)
     }
 
     list_finish(cmp, data, head, pending, node);
+}
+
+void list_bsort(struct list_head *head, list_cmp_t cmp, void *data)
+{
+    struct list_head *walk, *prev;
+    bool swap;
+
+    for (swap = true; swap && ({swap = false; true;}); ) {
+        prev = walk = head->next;
+        list_for_each_continue(walk, head) {
+            if (cmp(prev, walk, data) > 0) {
+                list_del(prev);
+                list_add(walk, prev);
+                swap = true;
+            }
+            prev = walk;
+        }
+    }
 }
