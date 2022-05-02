@@ -2,7 +2,7 @@
 flags = -g -O2 -Wall -Werror -D DEBUG_LIST -I src/
 head  = src/list.h
 obj   = src/sort.o src/check.o
-demo  = examples/benchmark
+demo  = examples/benchmark examples/selftest
 
 all: $(demo)
 
