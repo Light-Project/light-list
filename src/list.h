@@ -255,6 +255,22 @@ static inline bool list_check_outsize(const struct list_head *node)
     list_entry((ptr)->prev, type, member)
 
 /**
+ * list_next_entry - get the next element in list.
+ * @pos: the type * to cursor
+ * @member: the name of the list_head within the struct.
+ */
+#define list_next_entry(pos, member) \
+    list_entry((pos)->member.next, typeof(*(pos)), member)
+
+/**
+ * list_prev_entry - get the prev element in list.
+ * @pos: the type * to cursor
+ * @member: the name of the list_head within the struct.
+ */
+#define list_prev_entry(pos, member) \
+    list_entry((pos)->member.prev, typeof(*(pos)), member)
+
+/**
  * list_first_entry_or_null - get the first element from a list or null.
  * @ptr: the list head to take the element from.
  * @type: the type of the struct this is embedded in.
@@ -279,20 +295,28 @@ static inline bool list_check_outsize(const struct list_head *node)
 })
 
 /**
- * list_next_entry - get the next element in list.
- * @pos: the type * to cursor
+ * list_next_entry_or_null - get the next element in list or null.
+ * @pos: the type * to cursor.
+ * @head: the head for your list.
  * @member: the name of the list_head within the struct.
  */
-#define list_next_entry(pos, member) \
-    list_entry((pos)->member.next, typeof(*(pos)), member)
+#define list_next_entry_or_null(pos, head, member) ({               \
+    typeof(*(pos)) *pos__;                                          \
+    pos__ = list_entry((pos)->member.next, typeof(*(pos)), member); \
+    list_entry_check_head(pos__, head, member) ? NULL : pos__;      \
+})
 
 /**
- * list_prev_entry - get the prev element in list.
- * @pos: the type * to cursor
+ * list_prev_entry_or_null - get the prev element in list or null.
+ * @pos: the type * to cursor.
+ * @head: the head for your list.
  * @member: the name of the list_head within the struct.
  */
-#define list_prev_entry(pos, member) \
-    list_entry((pos)->member.prev, typeof(*(pos)), member)
+#define list_prev_entry_or_null(pos, head, member) ({               \
+    typeof(*(pos)) *pos__;                                          \
+    pos__ = list_entry((pos)->member.prev, typeof(*(pos)), member); \
+    list_entry_check_head(pos__, head, member) ? NULL : pos__;      \
+})
 
 /**
  * list_for_each - iterate over a list.
