@@ -1,4 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
+/*
+ * Copyright(c) 2021 Sanpe <sanpeqf@gmail.com>
+ */
+
 #ifndef _LIST_H_
 #define _LIST_H_
 
@@ -12,22 +16,14 @@ struct list_head {
     struct list_head *prev, *next;
 };
 
+#define LIST_HEAD_STATIC(name) \
+    {&(name), &(name)}
+
 #define LIST_HEAD_INIT(name) \
-    (struct list_head) { &(name), &(name) }
+    (struct list_head) LIST_HEAD_STATIC(name)
 
 #define LIST_HEAD(name) \
     struct list_head name = LIST_HEAD_INIT(name)
-
-/**
- * container_of - cast a member of a structure out to the containing structure.
- * @ptr: the pointer to the member.
- * @type: the type of the container struct this is embedded in.
- * @member: the name of the member within the struct.
- */
-#define container_of(ptr, type, member) ({              \
-    const typeof(((type *)0)->member) *__mptr = (ptr);  \
-    (type *)((char *)__mptr - offsetof(type,member));   \
-})
 
 #ifndef POISON_OFFSET
 # define POISON_OFFSET 0
@@ -101,8 +97,8 @@ static inline void list_del(struct list_head *node)
 
     node->prev->next = node->next;
     node->next->prev = node->prev;
-    node->next = NULL;
-    node->prev = NULL;
+    node->next = POISON_LIST1;
+    node->prev = POISON_LIST2;
 }
 
 /**
@@ -201,12 +197,23 @@ static inline bool list_check_empty(const struct list_head *head)
 }
 
 /**
+ * list_check_another - check whether has another node.
+ * @head: list head to check.
+ * @node: the unique node.
+ */
+static inline bool list_check_another(const struct list_head *head, const struct list_head *node)
+{
+    return head->next == node && head->prev == node;
+}
+
+/**
  * list_check_outsize - check whether the node is outside the linked list.
  * @node: list entry to check.
  */
 static inline bool list_check_outsize(const struct list_head *node)
 {
-    return !node->prev && !node->next;
+    return node->next == POISON_LIST1 &&
+           node->prev == POISON_LIST2;
 }
 
 /**
@@ -215,8 +222,10 @@ static inline bool list_check_outsize(const struct list_head *node)
  * @type: the type of the struct this is embedded in.
  * @member: the name of the list_head within the struct.
  */
-#define list_entry(ptr, type, member) \
-    container_of(ptr, type, member)
+#define list_entry(ptr, type, member) ({                \
+    const typeof(((type *)0)->member) *__mptr = (ptr);  \
+    (type *)((char *)__mptr - offsetof(type,member));   \
+})
 
 /**
  * list_entry_check_head - test if the entry points to the head of the list.
@@ -232,8 +241,6 @@ static inline bool list_check_outsize(const struct list_head *node)
  * @ptr: the list head to take the element from.
  * @type: the type of the struct this is embedded in.
  * @member: the name of the list_head within the struct.
- *
- * Note, that list is expected to be not empty.
  */
 #define list_first_entry(ptr, type, member) \
     list_entry((ptr)->next, type, member)
@@ -243,11 +250,33 @@ static inline bool list_check_outsize(const struct list_head *node)
  * @ptr: the list head to take the element from.
  * @type: the type of the struct this is embedded in.
  * @member: the name of the list_head within the struct.
- *
- * Note, that list is expected to be not empty.
  */
 #define list_last_entry(ptr, type, member) \
     list_entry((ptr)->prev, type, member)
+
+/**
+ * list_first_entry_or_null - get the first element from a list or null.
+ * @ptr: the list head to take the element from.
+ * @type: the type of the struct this is embedded in.
+ * @member: the name of the list_head within the struct.
+ */
+#define list_first_entry_or_null(ptr, type, member) ({          \
+    struct list_head *head__ = (ptr);                           \
+    struct list_head *pos__ = head__->next;                     \
+    pos__ != head__ ? list_entry(pos__, type, member) : NULL;   \
+})
+
+/**
+ * list_last_entry_or_null - get the last element from a list or null.
+ * @ptr: the list head to take the element from.
+ * @type: the type of the struct this is embedded in.
+ * @member: the name of the list_head within the struct.
+ */
+#define list_last_entry_or_null(ptr, type, member) ({           \
+    struct list_head *head__ = (ptr);                           \
+    struct list_head *pos__ = head__->prev;                     \
+    pos__ != head__ ? list_entry(pos__, type, member) : NULL;   \
+})
 
 /**
  * list_next_entry - get the next element in list.
@@ -264,20 +293,6 @@ static inline bool list_check_outsize(const struct list_head *node)
  */
 #define list_prev_entry(pos, member) \
     list_entry((pos)->member.prev, typeof(*(pos)), member)
-
-/**
- * list_first_entry_or_null - get the first element from a list.
- * @ptr: the list head to take the element from.
- * @type: the type of the struct this is embedded in.
- * @member: the name of the list_head within the struct.
- *
- * Note, that if the list is empty, it returns NULL.
- */
-#define list_first_entry_or_null(ptr, type, member) ({          \
-    struct list_head *head__ = (ptr);                           \
-    struct list_head *pos__ = head__->next;                     \
-    pos__ != head__ ? list_entry(pos__, type, member) : NULL;   \
-})
 
 /**
  * list_for_each - iterate over a list.
