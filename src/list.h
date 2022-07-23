@@ -9,11 +9,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#define likely(x)   __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
-
 struct list_head {
-    struct list_head *prev, *next;
+    struct list_head *prev;
+    struct list_head *next;
 };
 
 #define LIST_HEAD_STATIC(name) \
@@ -24,6 +22,11 @@ struct list_head {
 
 #define LIST_HEAD(name) \
     struct list_head name = LIST_HEAD_INIT(name)
+
+#ifndef likely
+# define likely(x) __builtin_expect(!!(x), 1)
+# define unlikely(x) __builtin_expect(!!(x), 0)
+#endif
 
 #ifndef POISON_OFFSET
 # define POISON_OFFSET 0
@@ -41,7 +44,7 @@ extern bool list_debug_add_check(struct list_head *prev, struct list_head *next,
 extern bool list_debug_del_check(struct list_head *node);
 #endif
 
-static inline void list_insert(struct list_head *prev, struct list_head *next, struct list_head *new)
+static void list_insert(struct list_head *prev, struct list_head *next, struct list_head *new)
 {
 #ifdef DEBUG_LIST
     if (unlikely(!list_debug_add_check(prev, next, new)))
@@ -85,24 +88,41 @@ static inline void list_add_prev(struct list_head *node, struct list_head *new)
 }
 
 /**
- * list_del - in fact, it just connect next and prev node.
+ * list_deluf - deletes entry from list (unsafe).
  * @node: the element to delete from the list.
  */
-static inline void list_del(struct list_head *node)
+static inline void list_deluf(struct list_head *node)
+{
+    node->prev->next = node->next;
+    node->next->prev = node->prev;
+}
+
+/**
+ * list_delck - deletes entry from list (check only).
+ * @node: the element to delete from the list.
+ */
+static inline void list_delck(struct list_head *node)
 {
 #ifdef DEBUG_LIST
     if (unlikely(!list_debug_del_check(node)))
         return;
 #endif
+    list_deluf(node);
+}
 
-    node->prev->next = node->next;
-    node->next->prev = node->prev;
+/**
+ * list_del - deletes entry from list.
+ * @node: the element to delete from the list.
+ */
+static inline void list_del(struct list_head *node)
+{
+    list_delck(node);
     node->next = POISON_LIST1;
     node->prev = POISON_LIST2;
 }
 
 /**
- * list_replace - replace a linked list node with an external node.
+ * list_replace - replace a list node with an external node.
  * @old: the element to be replaced.
  * @new: the new element to insert.
  */
@@ -112,6 +132,45 @@ static inline void list_replace(struct list_head *old, struct list_head *new)
     new->next = old->next;
     new->prev->next = new;
     new->next->prev = new;
+}
+
+/**
+ * list_move - move the node to the next of the node.
+ * @head: the head that will precede our entry.
+ * @node: the entry to move.
+ */
+static inline void list_move(struct list_head *head, struct list_head *node)
+{
+    list_del(node);
+    list_add(head, node);
+}
+
+/**
+ * list_move_prev - move the node to the prev of the node.
+ * @head: the head that will follow our entry.
+ * @node: the entry to move.
+ */
+static inline void list_move_prev(struct list_head *head, struct list_head *node)
+{
+    list_del(node);
+    list_add_prev(head, node);
+}
+
+/**
+ * list_swap - replace entry1 with entry2 and re-add entry1 at entry2's position.
+ * @node1: the location to place entry2.
+ * @node2: the location to place entry1.
+ */
+static inline void list_swap(struct list_head *node1, struct list_head *node2)
+{
+	struct list_head *prev = node2->prev;
+
+    list_del(node2);
+	list_replace(node1, node2);
+
+	if (prev == node1)
+		prev = node2;
+	list_add(prev, node1);
 }
 
 /**
@@ -133,28 +192,6 @@ static inline void list_replace_init(struct list_head *old, struct list_head *ne
 {
     list_replace(old, new);
     list_head_init(old);
-}
-
-/**
- * list_move_front - move the node to the front of the list.
- * @head: the head that will precede our entry.
- * @node: the entry to move.
- */
-static inline void list_move_front(struct list_head *head, struct list_head *node)
-{
-    list_del(node);
-    list_add(head, node);
-}
-
-/**
- * list_move_tail - move the node to the tail of the list.
- * @head: the head that will follow our entry.
- * @node: the entry to move.
- */
-static inline void list_move_tail(struct list_head *head, struct list_head *node)
-{
-    list_del(node);
-    list_add_prev(head, node);
 }
 
 /**
@@ -207,13 +244,12 @@ static inline bool list_check_another(const struct list_head *head, const struct
 }
 
 /**
- * list_check_outsize - check whether the node is outside the linked list.
+ * list_check_outsize - check whether the node is outside the list.
  * @node: list entry to check.
  */
 static inline bool list_check_outsize(const struct list_head *node)
 {
-    return node->next == POISON_LIST1 &&
-           node->prev == POISON_LIST2;
+    return node->next == POISON_LIST1 && node->prev == POISON_LIST2;
 }
 
 /**
@@ -256,7 +292,7 @@ static inline bool list_check_outsize(const struct list_head *node)
 
 /**
  * list_next_entry - get the next element in list.
- * @pos: the type * to cursor
+ * @pos: the type * to cursor.
  * @member: the name of the list_head within the struct.
  */
 #define list_next_entry(pos, member) \
@@ -264,7 +300,7 @@ static inline bool list_check_outsize(const struct list_head *node)
 
 /**
  * list_prev_entry - get the prev element in list.
- * @pos: the type * to cursor
+ * @pos: the type * to cursor.
  * @member: the name of the list_head within the struct.
  */
 #define list_prev_entry(pos, member) \
@@ -320,8 +356,8 @@ static inline bool list_check_outsize(const struct list_head *node)
 
 /**
  * list_for_each - iterate over a list.
- * @head: the head for your list.
  * @pos: the &struct list_head to use as a loop cursor.
+ * @head: the head for your list.
  */
 #define list_for_each(pos, head) \
     for ((pos) = (head)->next; (pos) != (head); pos = (pos)->next)
@@ -335,15 +371,15 @@ static inline bool list_check_outsize(const struct list_head *node)
     for ((pos) = (head)->prev; (pos) != (head); (pos) = (pos)->prev)
 
 /**
- * list_for_each - iterate over a list from the current point.
- * @head: the head for your list.
+ * list_for_each_from - iterate over a list from the current point.
  * @pos: the &struct list_head to use as a loop cursor.
+ * @head: the head for your list.
  */
 #define list_for_each_from(pos, head) \
     for (; !list_check_head(pos, head); (pos) = (pos)->next)
 
 /**
- * list_for_each_reverse - iterate over a list backwards from the current point.
+ * list_for_each_reverse_from - iterate over a list backwards from the current point.
  * @pos: the &struct list_head to use as a loop cursor.
  * @head: the head for your list.
  */
@@ -391,7 +427,7 @@ static inline bool list_check_outsize(const struct list_head *node)
          (pos) = (tmp), (tmp) = (tmp)->prev)
 
 /**
- * list_for_each_reverse_safe - iterate over a list safe against removal of list entry from the current point.
+ * list_for_each_from_safe - iterate over a list safe against removal of list entry from the current point.
  * @pos: the &struct list_head to use as a loop cursor.
  * @tmp: another list_head to use as temporary storage.
  * @head: the head for your list.
@@ -402,7 +438,7 @@ static inline bool list_check_outsize(const struct list_head *node)
          (pos) = (tmp), (tmp) = (tmp)->next)
 
 /**
- * list_for_each_reverse_safe - iterate backwards over list safe against removal from the current point.
+ * list_for_each_reverse_from_safe - iterate backwards over list safe against removal from the current point.
  * @pos: the &struct list_head to use as a loop cursor.
  * @tmp: another list_head to use as temporary storage.
  * @head: the head for your list.
@@ -435,7 +471,7 @@ static inline bool list_check_outsize(const struct list_head *node)
          (pos) = (tmp), (tmp) = (tmp)->prev)
 
 /**
- * list_for_each_entry - iterate over list of given type
+ * list_for_each_entry - iterate over list of given type.
  * @pos: the type * to use as a loop cursor.
  * @head: the head for your list.
  * @member: the name of the list_head within the struct.
@@ -525,7 +561,7 @@ static inline bool list_check_outsize(const struct list_head *node)
          (pos) = (tmp), (tmp) = list_prev_entry(tmp, member))
 
 /**
- * list_for_each_entry_continue_safe - iterate over list from current point safe against removal.
+ * list_for_each_entry_from_safe - iterate over list from current point safe against removal.
  * @pos: the type * to use as a loop cursor.
  * @tmp: another type * to use as temporary storage.
  * @head: the head for your list.
@@ -537,7 +573,7 @@ static inline bool list_check_outsize(const struct list_head *node)
          (pos) = (tmp), (tmp) = list_next_entry(tmp, member))
 
 /**
- * list_for_each_entry_continue_safe - iterate backwards over list from current point safe against removal.
+ * list_for_each_entry_reverse_from_safe - iterate backwards over list from current point safe against removal.
  * @pos: the type * to use as a loop cursor.
  * @tmp: another type * to use as temporary storage.
  * @head: the head for your list.
@@ -562,7 +598,7 @@ static inline bool list_check_outsize(const struct list_head *node)
          (pos) = (tmp), (tmp) = list_next_entry(tmp, member))
 
 /**
- * list_for_each_entry_continue_safe - continue backwards over list iteration safe against removal.
+ * list_for_each_entry_reverse_continue_safe - continue backwards over list iteration safe against removal.
  * @pos: the type * to use as a loop cursor.
  * @tmp: another type * to use as temporary storage.
  * @head: the head for your list.
