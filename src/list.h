@@ -44,7 +44,7 @@ extern bool list_debug_add_check(struct list_head *prev, struct list_head *next,
 extern bool list_debug_del_check(struct list_head *node);
 #endif
 
-static void list_insert(struct list_head *prev, struct list_head *next, struct list_head *new)
+static inline void list_insert(struct list_head *prev, struct list_head *next, struct list_head *new)
 {
 #ifdef DEBUG_LIST
     if (unlikely(!list_debug_add_check(prev, next, new)))
@@ -141,7 +141,7 @@ static inline void list_replace(struct list_head *old, struct list_head *new)
  */
 static inline void list_move(struct list_head *head, struct list_head *node)
 {
-    list_del(node);
+    list_delck(node);
     list_add(head, node);
 }
 
@@ -152,7 +152,7 @@ static inline void list_move(struct list_head *head, struct list_head *node)
  */
 static inline void list_move_prev(struct list_head *head, struct list_head *node)
 {
-    list_del(node);
+    list_delck(node);
     list_add_prev(head, node);
 }
 
@@ -165,7 +165,7 @@ static inline void list_swap(struct list_head *node1, struct list_head *node2)
 {
 	struct list_head *prev = node2->prev;
 
-    list_del(node2);
+    list_delck(node2);
 	list_replace(node1, node2);
 
 	if (prev == node1)
