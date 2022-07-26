@@ -20,15 +20,9 @@ bool list_debug_add_check(struct list_head *prev, struct list_head *next, struct
         return false;
     }
 
-    if (unlikely(new->next == next)) {
-        fprintf(stderr, "list_add corruption (%p) new->next should not be next (%p)\n",
-        new, next);
-        return false;
-    }
-
-    if (unlikely(new->prev == prev)) {
-        fprintf(stderr, "list_add corruption (%p) new->prev should not be prev (%p)\n",
-        new, prev);
+    if (unlikely(new == prev || new == next)) {
+        fprintf(stderr, "list_add corruption double add: new=(%p), prev=(%p), next=(%p)\n",
+        new, prev, next);
         return false;
     }
 
